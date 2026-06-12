@@ -448,8 +448,8 @@ main() {
   echo "     ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███████╗"
   echo "     ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝"
   echo -e "${_r}"
-  echo -e "  ${_b}Terminal Kit${_r} - Friendly Linux from scratch"
-  echo -e "  A modern, beginner-friendly terminal setup for any Linux install."
+  echo -e "  ${_b}Terminal Kit${_r} — Friendly Arch Linux from scratch"
+  echo -e "  Setting up your terminal. This should only take a minute."
   echo ""
 
   setup_priv
@@ -462,21 +462,23 @@ main() {
   verify
 
   echo ""
-  echo -e "${_b}${_g}All done!${_r}"
+  echo -e "${_b}${_g}╔══════════════════════════════════════════════╗${_r}"
+  echo -e "${_b}${_g}║   🎉  Your terminal is ready to rock!  🎉   ║${_r}"
+  echo -e "${_b}${_g}╚══════════════════════════════════════════════╝${_r}"
   echo ""
-  echo -e "  Reload your shell:  ${_c}source ~/.bashrc${_r}"
-  echo -e "  Or open a new terminal and try:"
+  echo -e "  Open a ${_b}new terminal${_r} (or run ${_c}source ~/.bashrc${_r}) and try:"
   echo ""
-  echo -e "    ${_c}helpme${_r}        friendly help index"
-  echo -e "    ${_c}tips${_r}          random bash tip"
-  echo -e "    ${_c}sysinfo${_r}       system overview"
-  echo -e "    ${_c}cheat tar${_r}     real-world command examples"
+  echo -e "    ${_y}helpme${_r}           → friendly help index"
+  echo -e "    ${_y}tips${_r}             → random bash tip (also: ${_y}tip${_r})"
+  echo -e "    ${_y}sysinfo${_r}          → see your system at a glance"
+  echo -e "    ${_y}cheat tar${_r}        → real-world command examples"
+  echo -e "    ${_y}cheat git${_r}        → git cheatsheet"
   echo ""
-
-  if grep -qiE "(microsoft|wsl)" /proc/version 2>/dev/null; then
-    echo -e "  ${_y}WSL:${_r} Set your font to 'JetBrainsMono Nerd Font' in Windows Terminal settings."
-    echo ""
-  fi
+  echo -e "  ${_c}Pro move:${_r} set your terminal font to 'JetBrainsMono Nerd Font'"
+  echo -e "  for the best-looking prompt with icons."
+  echo ""
+  echo -e "  Welcome to Linux. You're going to love it. 🐧"
+  echo ""
 }
 
 main "$@"

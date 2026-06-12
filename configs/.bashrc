@@ -179,7 +179,7 @@ sysinfo() {
   echo -e "${_c}Disk:${_r}     $(df -h ~ | awk 'NR==2{print $3 " used / " $2 " total (" $5 " full)"}')"
   echo ""
   echo -e "${_b}Network${_r}"
-  echo -e "${_c}Local IP:${_r} $(hostname -I 2>/dev/null | awk '{print $1}')"
+  echo -e "${_c}Local IP:${_r} $(ip route get 1 2>/dev/null | awk '{print $7}' | head -1)"
   echo ""
 }
 
@@ -234,6 +234,7 @@ tips() {
   echo -e "${_y}💡 Tip:${_r} ${__bash_tips[$idx]}"
   echo -e "   ${_b}Run 'tips' anytime for another. Run 'cheat <cmd>' for examples.${_r}"
 }
+alias tip='tips'
 
 # ==============================================================================
 # helpme: beginner-friendly help index
@@ -304,7 +305,7 @@ helpme() {
     network)
       echo -e "\n${_b}Networking${_r}"
       echo -e "  ${_c}myip${_r}                    your public IP address"
-      echo -e "  ${_c}hostname -I${_r}             your local IP address"
+      echo -e "  ${_c}ip route get 1${_r}          your local IP address"
       echo -e "  ${_c}ports${_r}                   what's listening on which port"
       echo -e "  ${_c}ping google.com${_r}         test internet connectivity"
       echo -e "  ${_c}curl <url>${_r}              fetch a URL"
@@ -352,24 +353,25 @@ command_not_found_handle() {
   local _r="\033[0m" _y="\033[1;33m" _c="\033[0;36m"
   echo -e "${_y}Command not found:${_r} $1"
 
-  # Suggest install if apt-cache knows about it
-  if command -v apt-cache >/dev/null 2>&1; then
+  # Suggest install via available package manager
+  if command -v pacman >/dev/null 2>&1; then
+    echo -e "${_c}Try installing it:${_r} sudo pacman -S $1"
+  elif command -v apt-cache >/dev/null 2>&1; then
     local suggestion
     suggestion=$(apt-cache search "^$1$" 2>/dev/null | head -1)
-    if [ -n "$suggestion" ]; then
-      echo -e "${_c}Try installing it:${_r} sudo apt install $1"
-    fi
+    [ -n "$suggestion" ] && echo -e "${_c}Try installing it:${_r} sudo apt install $1"
   fi
 
   # Common typo/alias suggestions
   case "$1" in
-    vim|vi)    echo -e "${_c}Tip:${_r} Try 'nano' if you don't have vim: sudo apt install vim" ;;
-    python)    echo -e "${_c}Tip:${_r} Try 'python3' instead" ;;
-    pip)       echo -e "${_c}Tip:${_r} Try 'pip3' instead" ;;
-    cls)       echo -e "${_c}Tip:${_r} On Linux, 'clear' clears the screen (or Ctrl+L)" ;;
-    dir)       echo -e "${_c}Tip:${_r} On Linux, use 'ls' to list files" ;;
-    ipconfig)  echo -e "${_c}Tip:${_r} On Linux, use 'ip addr' or 'hostname -I'" ;;
-    ifconfig)  echo -e "${_c}Tip:${_r} Try: sudo apt install net-tools" ;;
+    vim|vi)      echo -e "${_c}Tip:${_r} Try 'nano' or install vim: sudo pacman -S vim" ;;
+    python)      echo -e "${_c}Tip:${_r} Try 'python3' instead" ;;
+    pip)         echo -e "${_c}Tip:${_r} Try 'pip3' instead" ;;
+    cls)         echo -e "${_c}Tip:${_r} On Linux, 'clear' clears the screen (or Ctrl+L)" ;;
+    dir)         echo -e "${_c}Tip:${_r} On Linux, use 'ls' to list files" ;;
+    ipconfig)    echo -e "${_c}Tip:${_r} On Linux, use 'ip addr' or 'ip route get 1'" ;;
+    ifconfig)    echo -e "${_c}Tip:${_r} Try: sudo pacman -S net-tools" ;;
+    apt|apt-get) echo -e "${_c}Tip:${_r} On Arch, use 'sudo pacman -S <package>' to install software" ;;
   esac
 
   echo -e "  Run ${_c}cheat <command>${_r} for examples, or ${_c}helpme${_r} for a quick reference."
@@ -397,12 +399,6 @@ else
 fi
 
 # ==============================================================================
-# Debian Chroot Detection
-# ==============================================================================
-if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
-  debian_chroot=$(cat /etc/debian_chroot)
-fi
-
 # ==============================================================================
 # Optional: ble.sh (autosuggestions + syntax highlighting)
 # ==============================================================================
@@ -464,20 +460,6 @@ if command -v direnv >/dev/null 2>&1; then
 fi
 
 # ==============================================================================
-# WSL-Specific Configuration
-# ==============================================================================
-is_wsl() { grep -qiE "(microsoft|wsl)" /proc/version 2>/dev/null; }
-if is_wsl; then
-  if command -v clip.exe >/dev/null 2>&1; then
-    alias clip='clip.exe'
-    alias pbcopy='clip.exe'
-    alias pbpaste='powershell.exe -NoLogo -NoProfile -Command Get-Clipboard'
-  fi
-  command -v wslview >/dev/null 2>&1 && alias open='wslview'
-  export WSL_UTF8=1
-fi
-
-# ==============================================================================
 # PATH Configuration
 # ==============================================================================
 [ -d "$HOME/.local/bin" ] && PATH="$HOME/.local/bin:$PATH"
@@ -493,14 +475,10 @@ if command -v corepack >/dev/null 2>&1; then
 fi
 
 # ==============================================================================
-# Kubernetes Configuration
-# ==============================================================================
-export KUBECONFIG="/mnt/c/Users/GrantRigby/.kube/config"
-
-# ==============================================================================
 # Startup Message
 # ==============================================================================
 if [[ $- == *i* ]]; then
-  printf "\033[1;32mHost:\033[0m %s | \033[1;32mUser:\033[0m %s\n" "$HOSTNAME" "$USER"
+  printf "\033[1;32m\033[1m  ★  Welcome back, %s!\033[0m  You're on \033[0;36m%s\033[0m\n" "$USER" "$HOSTNAME"
+  printf "     \033[1;33mhelpme\033[0m · \033[1;33mtips\033[0m · \033[1;33msysinfo\033[0m · \033[1;33mcheat <cmd>\033[0m\n\n"
   tips
 fi
