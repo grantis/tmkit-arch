@@ -1,0 +1,27 @@
+# ~/.newsboat/urls — starter RSS feeds for Terminal Kit
+# Add your own feeds here, one per line.
+# Format:  https://feed-url  "Category"  title
+# Reload feeds: press r in newsboat
+
+# Tech News
+https://hnrss.org/frontpage "Tech" "Hacker News"
+https://feeds.arstechnica.com/arstechnica/index "Tech" "Ars Technica"
+https://www.wired.com/feed/rss "Tech" "Wired"
+
+# Linux & Open Source
+https://www.phoronix.com/rss.php "Linux" "Phoronix"
+https://archlinux.org/feeds/news/ "Linux" "Arch Linux News"
+https://itsfoss.com/feed "Linux" "It's FOSS"
+
+# Programming
+https://stackoverflow.blog/feed "Dev" "Stack Overflow Blog"
+https://github.blog/feed "Dev" "GitHub Blog"
+
+# Science & Learning
+https://www.nasa.gov/rss/dyn/breaking_news.rss "Science" "NASA News"
+https://feeds.feedburner.com/TedTalks_video "Learning" "TED Talks"
+
+# YouTube (via RSS — no account needed)
+# Format: https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID_HERE
+# Find a channel ID: go to channel page, view source, search "channelId"
+# https://www.youtube.com/feeds/videos.xml?channel_id=YOURCHANNELID "YouTube" "Channel Name"

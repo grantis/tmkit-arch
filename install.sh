@@ -211,6 +211,31 @@ install_core() {
 
   # bat - better cat with syntax highlighting (nice for beginners)
   install_pkg bat "bat (better cat)" bat || true
+
+  # glow - beautiful markdown renderer (makes docs/ actually readable)
+  install_pkg glow "glow (markdown reader)" glow || true
+
+  # wget - download files (more intuitive than curl for beginners)
+  install_pkg wget "wget (file downloader)" wget || true
+
+  # ncdu - interactive disk usage viewer
+  install_pkg ncdu "ncdu (disk usage viewer)" ncdu || true
+
+  # rsync - file sync and backup
+  install_pkg rsync "rsync (sync & backup)" rsync || true
+
+  # fastfetch - beautiful system info display
+  install_pkg fastfetch "fastfetch (system info)" fastfetch || true
+
+  # qalculate - powerful terminal calculator
+  if ! command -v qalc >/dev/null 2>&1; then
+    info "Installing qalc (calculator)..."
+    $PKG_INSTALL qalculate-gtk >/dev/null 2>&1 && ok "qalc installed" || \
+      $PKG_INSTALL libqalculate >/dev/null 2>&1 && ok "qalc installed" || \
+      warn "qalc unavailable - skip"
+  else
+    ok "qalc already installed"
+  fi
 }
 
 # ==============================================================================
@@ -268,6 +293,24 @@ deploy_configs() {
     ok "~/.config/starship.toml deployed"
   else
     warn "configs/starship.toml not found - skipping"
+  fi
+
+  # newsboat starter feeds (only if newsboat urls don't already exist)
+  if [ -f "$script_dir/configs/newsboat/urls" ]; then
+    if [ ! -f "$HOME/.newsboat/urls" ]; then
+      mkdir -p "$HOME/.newsboat"
+      cp "$script_dir/configs/newsboat/urls" "$HOME/.newsboat/urls"
+      ok "~/.newsboat/urls deployed (starter RSS feeds)"
+    else
+      ok "~/.newsboat/urls already exists - not overwriting"
+    fi
+  fi
+
+  # aerc config example (reference only - not auto-applied)
+  if [ -f "$script_dir/configs/aerc/accounts.conf.example" ]; then
+    mkdir -p "$HOME/.config/aerc"
+    cp "$script_dir/configs/aerc/accounts.conf.example" "$HOME/.config/aerc/accounts.conf.example"
+    ok "~/.config/aerc/accounts.conf.example deployed (edit to set up email)"
   fi
 }
 
@@ -380,25 +423,192 @@ install_font() {
   rm -rf "$tmp"
 }
 
+# ==============================================================================
+# Daily-life tools
+# ==============================================================================
+
+install_aerc() {
+  if command -v aerc >/dev/null 2>&1; then ok "aerc already installed"; return; fi
+  info "Installing aerc (email client)..."
+  $PKG_INSTALL aerc >/dev/null 2>&1 \
+    && ok "aerc installed — run 'aerc' to set up your email account" \
+    || warn "aerc install failed"
+}
+
+install_cmus() {
+  if command -v cmus >/dev/null 2>&1; then ok "cmus already installed"; return; fi
+  info "Installing cmus (music player)..."
+  $PKG_INSTALL cmus >/dev/null 2>&1 \
+    && ok "cmus installed — run 'music' to open it" \
+    || warn "cmus install failed"
+}
+
+install_newsboat() {
+  if command -v newsboat >/dev/null 2>&1; then ok "newsboat already installed"; return; fi
+  info "Installing newsboat (RSS/news reader)..."
+  $PKG_INSTALL newsboat >/dev/null 2>&1 \
+    && ok "newsboat installed — run 'news' to open it  |  add feeds: ~/.newsboat/urls" \
+    || warn "newsboat install failed"
+}
+
+install_calcurse() {
+  if command -v calcurse >/dev/null 2>&1; then ok "calcurse already installed"; return; fi
+  info "Installing calcurse (calendar & tasks)..."
+  $PKG_INSTALL calcurse >/dev/null 2>&1 \
+    && ok "calcurse installed — run 'calendar' to open it" \
+    || warn "calcurse install failed"
+}
+
+install_yazi() {
+  if command -v yazi >/dev/null 2>&1; then ok "yazi already installed"; return; fi
+  info "Installing yazi (visual file manager)..."
+  $PKG_INSTALL yazi >/dev/null 2>&1 \
+    && ok "yazi installed — run 'files' to open it" \
+    || warn "yazi install failed"
+}
+
+install_zathura() {
+  if command -v zathura >/dev/null 2>&1; then ok "zathura already installed"; return; fi
+  info "Installing zathura (PDF reader)..."
+  $PKG_INSTALL zathura zathura-pdf-mupdf >/dev/null 2>&1 \
+    && ok "zathura installed — run 'zathura file.pdf' to open a PDF" \
+    || warn "zathura install failed (requires desktop environment to display)"
+}
+
+install_w3m() {
+  if command -v w3m >/dev/null 2>&1; then ok "w3m already installed"; return; fi
+  info "Installing w3m (text web browser)..."
+  $PKG_INSTALL w3m >/dev/null 2>&1 \
+    && ok "w3m installed — run 'w3m https://example.com' to browse" \
+    || warn "w3m install failed"
+}
+
+install_mpv() {
+  if command -v mpv >/dev/null 2>&1; then ok "mpv already installed"; return; fi
+  info "Installing mpv (video & audio player)..."
+  $PKG_INSTALL mpv >/dev/null 2>&1 \
+    && ok "mpv installed — run 'vid <file>' or 'mpv <file>' to play anything" \
+    || warn "mpv install failed"
+}
+
+install_ytdlp() {
+  if command -v yt-dlp >/dev/null 2>&1; then ok "yt-dlp already installed"; return; fi
+  info "Installing yt-dlp (YouTube/video downloader)..."
+  $PKG_INSTALL yt-dlp >/dev/null 2>&1 \
+    && ok "yt-dlp installed — run 'yt-dlp <url>' to download any video or audio" \
+    || warn "yt-dlp install failed"
+}
+
+install_ncspot() {
+  if command -v ncspot >/dev/null 2>&1; then ok "ncspot already installed"; return; fi
+  info "Installing ncspot (Spotify TUI)..."
+  $PKG_INSTALL ncspot >/dev/null 2>&1 \
+    && ok "ncspot installed — run 'ncspot' and log in with your Spotify account" \
+    || warn "ncspot install failed"
+}
+
+install_pass() {
+  if command -v pass >/dev/null 2>&1; then ok "pass already installed"; return; fi
+  info "Installing pass (password manager)..."
+  $PKG_INSTALL pass >/dev/null 2>&1 \
+    && ok "pass installed — run 'pass init <your-email>' to set it up" \
+    || warn "pass install failed"
+}
+
+install_wl_clipboard() {
+  if command -v wl-copy >/dev/null 2>&1; then ok "wl-clipboard already installed"; return; fi
+  info "Installing wl-clipboard (clipboard for Wayland)..."
+  $PKG_INSTALL wl-clipboard >/dev/null 2>&1 \
+    && ok "wl-clipboard installed — use 'clip' to copy, 'paste' to paste" \
+    || warn "wl-clipboard install failed"
+}
+
+install_chafa() {
+  if command -v chafa >/dev/null 2>&1; then ok "chafa already installed"; return; fi
+  info "Installing chafa (image viewer for the terminal)..."
+  $PKG_INSTALL chafa >/dev/null 2>&1 \
+    && ok "chafa installed — run 'chafa photo.jpg' to view images in the terminal" \
+    || warn "chafa install failed"
+}
+
+# ==============================================================================
 optional_installs() {
-  header "Optional installs"
   echo -e "  These are recommended but not required."
 
+  header "Development tools"
   ask "Install Neovim? (modern text editor - replaces nano) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_neovim
 
-  ask "Install Taskwarrior? (terminal to-do list) [y/N]"
-  read -r choice
-  [[ "$choice" =~ ^[Yy]$ ]] && install_taskwarrior
-
-  ask "Install Lazygit? (visual git TUI - great for beginners) [y/N]"
+  ask "Install Lazygit? (visual git interface - great for beginners) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_lazygit
 
   ask "Install NVM? (Node.js version manager - needed for JS/web dev) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_nvm
+
+  header "Daily life"
+  echo -e "  ${_c}Everything you need to use your computer without a browser.${_r}"
+  echo ""
+
+  ask "Install aerc? (email client - read/send email in the terminal) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_aerc
+
+  ask "Install cmus? (music player - plays mp3, flac, ogg and more) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_cmus
+
+  ask "Install newsboat? (RSS reader - follow news, blogs, YouTube channels) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_newsboat
+
+  ask "Install calcurse? (calendar + task manager) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_calcurse
+
+  ask "Install yazi? (visual file manager with image previews) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_yazi
+
+  ask "Install zathura? (PDF reader - requires a desktop environment) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_zathura
+
+  ask "Install w3m? (text web browser - surf the web without leaving the terminal) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_w3m
+
+  ask "Install mpv? (video & audio player - plays almost any file or URL) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_mpv
+
+  ask "Install yt-dlp? (download YouTube videos, podcasts, audio) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_ytdlp
+
+  ask "Install ncspot? (Spotify TUI - needs a Spotify account) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_ncspot
+
+  header "Security"
+  ask "Install pass? (password manager - encrypted, yours forever) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_pass
+
+  ask "Install wl-clipboard? (clipboard integration for Wayland) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_wl_clipboard
+
+  ask "Install chafa? (view images directly in the terminal - genuinely magical) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_chafa
+
+  header "Tasks & fonts"
+  ask "Install Taskwarrior? (powerful terminal to-do list) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_taskwarrior
 
   ask "Install JetBrains Mono Nerd Font? (makes prompt icons render correctly) [y/N]"
   read -r choice
@@ -469,10 +679,11 @@ main() {
   echo -e "  Open a ${_b}new terminal${_r} (or run ${_c}source ~/.bashrc${_r}) and try:"
   echo ""
   echo -e "    ${_y}helpme${_r}           → friendly help index"
-  echo -e "    ${_y}tips${_r}             → random bash tip (also: ${_y}tip${_r})"
+  echo -e "    ${_y}helpme daily${_r}     → email, music, news, calendar, PDFs"
+  echo -e "    ${_y}helpme why${_r}       → what this is all about"
+  echo -e "    ${_y}tips${_r}             → random bash tip"
   echo -e "    ${_y}sysinfo${_r}          → see your system at a glance"
-  echo -e "    ${_y}cheat tar${_r}        → real-world command examples"
-  echo -e "    ${_y}cheat git${_r}        → git cheatsheet"
+  echo -e "    ${_y}customize${_r}        → make it yours"
   echo ""
   echo -e "  ${_c}Pro move:${_r} set your terminal font to 'JetBrainsMono Nerd Font'"
   echo -e "  for the best-looking prompt with icons."

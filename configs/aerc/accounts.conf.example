@@ -1,0 +1,45 @@
+# aerc accounts configuration — example for Gmail
+# Copy to: ~/.config/aerc/accounts.conf
+# Official docs: https://aerc-mail.org/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Gmail (IMAP + SMTP)
+#
+# Before this works you need to:
+#   1. Enable 2-Factor Authentication on your Google account
+#   2. Go to: myaccount.google.com → Security → App Passwords
+#   3. Generate an App Password (select "Mail" + "Linux computer")
+#   4. Use that 16-char App Password below — NOT your normal Gmail password
+# ──────────────────────────────────────────────────────────────────────────────
+
+[Gmail]
+source         = imaps://your.name@gmail.com:APP_PASSWORD_HERE@imap.gmail.com:993
+outgoing       = smtps://your.name@gmail.com:APP_PASSWORD_HERE@smtp.gmail.com:465
+default        = INBOX
+copy-to        = Sent
+from           = Your Name <your.name@gmail.com>
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Outlook / Hotmail / Live
+# ──────────────────────────────────────────────────────────────────────────────
+
+# [Outlook]
+# source         = imaps://your.name@outlook.com:PASSWORD@outlook.office365.com:993
+# outgoing       = smtps://your.name@outlook.com:PASSWORD@smtp.office365.com:587
+# default        = INBOX
+# copy-to        = Sent
+# from           = Your Name <your.name@outlook.com>
+
+# ──────────────────────────────────────────────────────────────────────────────
+# First-run tips
+#
+#   aerc                  open aerc
+#   ?                     help inside aerc
+#   q                     quit
+#   j/k                   move up/down
+#   Enter                 open message
+#   C                     compose new email
+#   r                     reply
+#   d                     delete
+#   :move Trash<Enter>    move to trash
+# ──────────────────────────────────────────────────────────────────────────────
