@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# install.sh - Terminal Kit installer
-# Supports: Arch, Ubuntu/Debian, Fedora/RHEL, and derivatives
+# install.sh - Terminal Kit installer (Arch Linux)
 # Handles root vs non-root, missing sudo, missing git, bare installs
 # Usage: bash install.sh
 
@@ -28,8 +27,8 @@ header() { echo -e "\n${_b}$1${_r}"; }
 
 # ==============================================================================
 # Privilege helper
-# On bare Arch you may be root. On Ubuntu you're a normal user with sudo.
-# This wrapper handles both without hardcoding sudo everywhere.
+# On a fresh Arch install you may be root. On a configured system you're a
+# normal user with sudo. This wrapper handles both without hardcoding sudo.
 # ==============================================================================
 PRIV=""
 setup_priv() {
@@ -58,29 +57,13 @@ PKG_INSTALL=""
 PKG_UPDATE=""
 
 detect_distro() {
-  if command -v pacman >/dev/null 2>&1; then
-    PKG_MANAGER="pacman"
-    PKG_UPDATE="$PRIV pacman -Sy --noconfirm"
-    PKG_INSTALL="$PRIV pacman -S --noconfirm --needed"
-
-  elif command -v apt >/dev/null 2>&1; then
-    PKG_MANAGER="apt"
-    PKG_UPDATE="$PRIV apt update -y"
-    PKG_INSTALL="$PRIV apt install -y"
-
-  elif command -v dnf >/dev/null 2>&1; then
-    PKG_MANAGER="dnf"
-    PKG_UPDATE="$PRIV dnf check-update; true"
-    PKG_INSTALL="$PRIV dnf install -y"
-
-  elif command -v zypper >/dev/null 2>&1; then
-    PKG_MANAGER="zypper"
-    PKG_UPDATE="$PRIV zypper refresh"
-    PKG_INSTALL="$PRIV zypper install -y"
-
-  else
-    fail "Could not detect a package manager (pacman, apt, dnf, zypper). Exiting."
+  if ! command -v pacman >/dev/null 2>&1; then
+    fail "This kit is built for Arch Linux, but pacman was not found. Exiting."
   fi
+
+  PKG_MANAGER="pacman"
+  PKG_UPDATE="$PRIV pacman -Sy --noconfirm"
+  PKG_INSTALL="$PRIV pacman -S --noconfirm --needed"
 
   # Read distro name nicely
   DISTRO_NAME="Unknown"
@@ -94,46 +77,15 @@ detect_distro() {
 
 # ==============================================================================
 # Package name mapping
-# Different distros use different names for the same tool.
+# A few tools have a different package name than their command on Arch.
 # Usage: pkg_name <canonical_name>
-# Returns the right package name for the current distro.
 # ==============================================================================
 pkg_name() {
   local tool="$1"
-  case "$PKG_MANAGER" in
-    pacman)
-      case "$tool" in
-        tldr)        echo "tealdeer" ;;
-        taskwarrior) echo "task" ;;
-        fd)          echo "fd" ;;
-        bat)         echo "bat" ;;
-        ripgrep)     echo "ripgrep" ;;
-        *)           echo "$tool" ;;
-      esac
-      ;;
-    apt)
-      case "$tool" in
-        tldr)        echo "tldr" ;;
-        taskwarrior) echo "taskwarrior" ;;
-        fd)          echo "fd-find" ;;
-        bat)         echo "bat" ;;
-        ripgrep)     echo "ripgrep" ;;
-        *)           echo "$tool" ;;
-      esac
-      ;;
-    dnf)
-      case "$tool" in
-        tldr)        echo "tealdeer" ;;
-        taskwarrior) echo "task" ;;
-        fd)          echo "fd-find" ;;
-        bat)         echo "bat" ;;
-        ripgrep)     echo "ripgrep" ;;
-        *)           echo "$tool" ;;
-      esac
-      ;;
-    *)
-      echo "$tool"
-      ;;
+  case "$tool" in
+    tldr)        echo "tealdeer" ;;
+    taskwarrior) echo "task" ;;
+    *)           echo "$tool" ;;
   esac
 }
 
@@ -184,11 +136,7 @@ bootstrap() {
   install_pkg openssh "openssh" ssh
 
   # bash-completion improves tab completion significantly
-  if [ "$PKG_MANAGER" = "pacman" ]; then
-    install_pkg bash-completion "bash-completion" bash-completion || true
-  else
-    install_pkg bash-completion "bash-completion" bash-completion || true
-  fi
+  install_pkg bash-completion "bash-completion" bash-completion || true
 }
 
 # ==============================================================================
@@ -253,12 +201,10 @@ install_starship() {
   fi
 
   # Prefer pacman on Arch - keeps it in the package manager
-  if [ "$PKG_MANAGER" = "pacman" ]; then
-    info "Installing Starship via pacman..."
-    $PKG_INSTALL starship >/dev/null 2>&1 && ok "Starship installed" && return
-  fi
+  info "Installing Starship via pacman..."
+  $PKG_INSTALL starship >/dev/null 2>&1 && ok "Starship installed" && return
 
-  # Fallback: official install script (works everywhere with curl)
+  # Fallback: official install script
   info "Installing Starship via install script..."
   if curl -sS https://starship.rs/install.sh | sh -s -- -y >/dev/null 2>&1; then
     ok "Starship installed"
@@ -326,6 +272,21 @@ deploy_configs() {
     done
     ok "Theme packs deployed — run 'theme list' to see options"
   fi
+
+  # user settings — created once, NEVER overwritten so your customizations
+  # (aliases, editor, tip frequency) survive every reinstall/upgrade of the kit
+  mkdir -p "$HOME/.config/tmkit"
+  if [ ! -f "$HOME/.config/tmkit/user.sh" ]; then
+    cat > "$HOME/.config/tmkit/user.sh" << 'USEREOF'
+# ~/.config/tmkit/user.sh — your personal terminal settings
+# Sourced by ~/.bashrc on startup. The installer NEVER overwrites this file,
+# so anything here survives reinstalls and upgrades of the kit.
+# 'customize' writes here automatically — or edit it by hand.
+USEREOF
+    ok "~/.config/tmkit/user.sh created — your settings are safe from reinstalls"
+  else
+    ok "~/.config/tmkit/user.sh kept — existing settings preserved"
+  fi
 }
 
 # ==============================================================================
@@ -371,12 +332,10 @@ install_lazygit() {
     return
   fi
 
-  if [ "$PKG_MANAGER" = "pacman" ]; then
-    info "Installing Lazygit via pacman..."
-    $PKG_INSTALL lazygit >/dev/null 2>&1 && ok "Lazygit installed" && return
-  fi
+  info "Installing Lazygit via pacman..."
+  $PKG_INSTALL lazygit >/dev/null 2>&1 && ok "Lazygit installed" && return
 
-  # Binary install for apt/dnf
+  # Fallback: prebuilt binary from GitHub releases
   info "Installing Lazygit from GitHub releases..."
   local version
   version=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest \
@@ -415,11 +374,7 @@ install_font() {
 
   # fontconfig might not exist on a bare install
   if ! command -v fc-cache >/dev/null 2>&1; then
-    if [ "$PKG_MANAGER" = "pacman" ]; then
-      $PKG_INSTALL fontconfig >/dev/null 2>&1
-    else
-      $PKG_INSTALL fontconfig >/dev/null 2>&1
-    fi
+    $PKG_INSTALL fontconfig >/dev/null 2>&1
   fi
 
   info "Downloading JetBrains Mono Nerd Font..."
@@ -525,7 +480,7 @@ install_ddgr() {
   if command -v ddgr >/dev/null 2>&1; then ok "ddgr already installed"; return; fi
   info "Installing ddgr (DuckDuckGo terminal search)..."
   $PKG_INSTALL ddgr >/dev/null 2>&1 \
-    && ok "ddgr installed — run 'search linux tips' or 'ddgr <query>'" \
+    && ok "ddgr installed — run 'web linux tips' or 'ddgr <query>'" \
     || warn "ddgr install failed"
 }
 
@@ -552,6 +507,91 @@ install_pass() {
   $PKG_INSTALL pass >/dev/null 2>&1 \
     && ok "pass installed — run 'pass init <your-email>' to set it up" \
     || warn "pass install failed"
+}
+
+# ==============================================================================
+# Web browsers — text-based (lynx) and block-based (browsh, carbonyl)
+# ==============================================================================
+install_lynx() {
+  if command -v lynx >/dev/null 2>&1; then ok "lynx already installed"; return; fi
+  info "Installing lynx (classic text web browser)..."
+  $PKG_INSTALL lynx >/dev/null 2>&1 \
+    && ok "lynx installed — run 'lynx example.com' to browse" \
+    || warn "lynx install failed"
+}
+
+install_browsh() {
+  if command -v browsh >/dev/null 2>&1; then ok "browsh already installed"; return; fi
+
+  # browsh renders pages by driving a real Firefox in the background
+  if ! command -v firefox >/dev/null 2>&1; then
+    info "browsh needs Firefox — installing it first..."
+    $PKG_INSTALL firefox >/dev/null 2>&1 || warn "firefox install failed (browsh needs it to render pages)"
+  fi
+
+  # Prefer the AUR build if yay is available
+  if command -v yay >/dev/null 2>&1; then
+    info "Installing browsh via yay (AUR)..."
+    yay -S --noconfirm browsh >/dev/null 2>&1 && ok "browsh installed — run 'browsh'" && return
+  fi
+
+  # Fallback: prebuilt binary from GitHub releases
+  info "Installing browsh from GitHub releases..."
+  local version
+  version=$(curl -s https://api.github.com/repos/browsh-org/browsh/releases/latest \
+    | grep tag_name | cut -d'"' -f4 | tr -d v)
+  if [ -z "$version" ]; then
+    warn "Could not fetch browsh version — install manually: https://www.brow.sh"
+    return
+  fi
+  local url="https://github.com/browsh-org/browsh/releases/download/v${version}/browsh_${version}_linux_amd64"
+  local tmp
+  tmp=$(mktemp -d)
+  curl -sLo "$tmp/browsh" "$url" \
+    && $PRIV install "$tmp/browsh" -D -t /usr/local/bin/ \
+    && ok "browsh installed — run 'browsh'" \
+    || warn "browsh install failed — see https://www.brow.sh"
+  rm -rf "$tmp"
+}
+
+install_carbonyl() {
+  if command -v carbonyl >/dev/null 2>&1; then ok "carbonyl already installed"; return; fi
+  info "Installing carbonyl (Chromium-based block browser)..."
+  # carbonyl has no stable per-arch release binary; AUR or Docker is the
+  # reliable path. A hard-coded release URL would silently break over time.
+  if command -v yay >/dev/null 2>&1; then
+    yay -S --noconfirm carbonyl >/dev/null 2>&1 \
+      && ok "carbonyl installed — run 'carbonyl example.com'" && return
+    warn "carbonyl install via yay failed"
+  fi
+  warn "carbonyl: install via AUR ('yay -S carbonyl') or Docker — https://github.com/fathyb/carbonyl"
+}
+
+# ==============================================================================
+# Writing & study tools
+# ==============================================================================
+install_pandoc() {
+  if command -v pandoc >/dev/null 2>&1; then ok "pandoc already installed"; return; fi
+  info "Installing pandoc (convert notes: markdown → PDF / Word)..."
+  $PKG_INSTALL pandoc >/dev/null 2>&1 \
+    && ok "pandoc installed — 'pandoc notes.md -o notes.pdf'" \
+    || warn "pandoc install failed"
+}
+
+install_poppler() {
+  if command -v pdftotext >/dev/null 2>&1; then ok "poppler (pdftotext) already installed"; return; fi
+  info "Installing poppler (read PDFs in the terminal)..."
+  $PKG_INSTALL poppler >/dev/null 2>&1 \
+    && ok "poppler installed — 'pdftotext file.pdf - | less' to read a PDF" \
+    || warn "poppler install failed"
+}
+
+install_aspell() {
+  if command -v aspell >/dev/null 2>&1; then ok "aspell already installed"; return; fi
+  info "Installing aspell (spell-checker for essays)..."
+  $PKG_INSTALL aspell aspell-en >/dev/null 2>&1 \
+    && ok "aspell installed — 'aspell check essay.txt' to spell-check" \
+    || warn "aspell install failed"
 }
 
 install_wl_clipboard() {
@@ -643,9 +683,25 @@ optional_installs() {
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_zathura
 
-  ask "Install w3m? (text web browser - surf the web without leaving the terminal) [y/N]"
+  header "Web browsers"
+  echo -e "  ${_c}Text browsers are fast & private; block browsers render real pages in colour.${_r}"
+  echo ""
+
+  ask "Install w3m? (lightweight text web browser) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_w3m
+
+  ask "Install lynx? (classic text web browser) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_lynx
+
+  ask "Install browsh? (renders full web pages as colour blocks - needs Firefox) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_browsh
+
+  ask "Install carbonyl? (Chromium in the terminal - images, video, the lot) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_carbonyl
 
   ask "Install ddgr? (DuckDuckGo search - search the web without a browser, no tracking) [y/N]"
   read -r choice
@@ -666,6 +722,22 @@ optional_installs() {
   ask "Install ncspot? (Spotify TUI - needs a Spotify account) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_ncspot
+
+  header "Writing & study"
+  echo -e "  ${_c}Capture notes, read PDFs, and turn your writing into shareable documents.${_r}"
+  echo ""
+
+  ask "Install pandoc? (convert notes: markdown → PDF / Word for assignments) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_pandoc
+
+  ask "Install poppler? (pdftotext - read PDFs in the terminal, no GUI) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_poppler
+
+  ask "Install aspell? (spell-check your essays and notes) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_aspell
 
   header "Security"
   ask "Install pass? (password manager - encrypted, yours forever) [y/N]"

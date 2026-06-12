@@ -26,14 +26,14 @@ show_always = false
 ssh_only = false
 ssh_symbol = "🌐 "
 format = "[@$hostname]($style) "
-style = "bold #ffd166"
+style = "bold #ffd166"  # tmkit:color:hostname
 disabled = false
 
 # ==============================================================================
 # Module: Directory
 # ==============================================================================
 [directory]
-style = "bold #118ab2"
+style = "bold #118ab2"  # tmkit:color:directory
 format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 3
 truncation_symbol = "…/"
@@ -63,7 +63,7 @@ deleted = "✘${count}"
 # Module: Git Branch
 # ==============================================================================
 [git_branch]
-style = "#06d6a0"
+style = "#06d6a0"  # tmkit:color:git_branch
 format = "([$symbol$branch]($style) )"
 symbol = "  "
 truncation_length = 30
@@ -94,7 +94,7 @@ disabled = true
 # ==============================================================================
 [cmd_duration]
 min_time = 500
-style = "bold #f17c1d"
+style = "bold #f17c1d"  # tmkit:color:cmd_duration
 format = "⏱️ [$duration]($style) "
 
 # ==============================================================================

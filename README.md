@@ -70,8 +70,25 @@ bash install.sh
 | `calcurse` | Calendar and task manager |
 | `yazi` | Visual file manager with image previews |
 | `zathura` | PDF reader |
-| `w3m` | Text-mode web browser |
 | `chafa` | View images directly in the terminal |
+
+### Web Browsers (optional)
+
+| Tool | What it does |
+|---|---|
+| `w3m` | Lightweight text-mode web browser |
+| `lynx` | Classic text-mode web browser |
+| `browsh` | Renders full web pages as colour blocks (drives Firefox) |
+| `carbonyl` | Chromium in the terminal — images and video included |
+| `ddgr` | DuckDuckGo search from the command line (`web <query>`) |
+
+### Writing & Study (optional)
+
+| Tool | What it does |
+|---|---|
+| `pandoc` | Convert notes: markdown → PDF / Word for assignments |
+| `poppler` | `pdftotext` — read PDFs in the terminal, no GUI needed |
+| `aspell` | Spell-check essays and notes |
 
 ### Security (optional)
 
@@ -98,6 +115,8 @@ helpme git            # version control basics
 helpme ssh            # SSH keys and connecting to servers/GitHub
 helpme network        # networking commands
 helpme daily          # email, music, news, calendar, PDFs
+helpme notes          # taking notes & studying in the terminal
+helpme web            # browsers and searching the web
 helpme packages       # installing software with pacman
 helpme why            # the philosophy behind this setup
 
@@ -106,6 +125,12 @@ sysinfo               # system overview
 cheat <command>       # real-world examples for any command
 customize             # interactive customization menu
 
+note                  # open today's note (markdown in ~/notes)
+note <title>          # open or create a note by name
+notes                 # browse all notes (fzf + preview)
+notes find <text>     # search inside every note
+
+web <query>           # DuckDuckGo search, no browser needed
 trash <file>          # safe delete — recoverable from ~/.trash
 extract <archive>     # unzip/untar any archive format
 mkcd <name>           # create a folder and enter it
@@ -119,6 +144,15 @@ md file.md            # read a markdown file beautifully
 
 ---
 
+## Your Settings Are Safe
+
+Anything you change with `customize` — custom shortcuts, your default editor,
+tip frequency — is written to `~/.config/tmkit/user.sh`, **not** `~/.bashrc`.
+The installer never touches that file, so re-running `install.sh` to add new
+tools won't wipe your personalisations. Your terminal grows with you.
+
+---
+
 ## Config Files
 
 ```
@@ -128,6 +162,9 @@ configs/
   newsboat/urls                → ~/.newsboat/urls  (starter RSS feeds)
   aerc/accounts.conf.example  → reference for email setup
 ```
+
+The installer also creates `~/.config/tmkit/user.sh` (your personal settings,
+never overwritten) and your notes live in `~/notes`.
 
 ---
 

@@ -1,5 +1,5 @@
 # ~/.bashrc - Terminal Kit
-# Arch Linux first, works on Ubuntu/Debian too
+# For Arch Linux
 # github.com/grantis/tmkit-arch
 
 case $- in *i*) ;; *) return ;; esac
@@ -77,7 +77,7 @@ alias vid='mpv'                                        # video & audio player
 alias calc='qalc'                                      # calculator (e.g. calc "15% of 80")
 alias weather='curl -s wttr.in'                        # full weather forecast
 alias wtf='curl -s "wttr.in?format=3"'                 # one-line weather summary
-alias search='ddgr --np'                               # web search (ddgr must be installed)
+alias web='ddgr --np'                                  # web search (ddgr must be installed)
 alias reddit='tuir'                                    # Reddit TUI
 # Clipboard: auto-detect Wayland vs X11
 if [ -n "$WAYLAND_DISPLAY" ]; then
@@ -239,6 +239,58 @@ except Exception:
 }
 
 # ==============================================================================
+# notes: capture, browse and search plain-markdown notes in ~/notes
+# Uses your $EDITOR, plus fzf + glow if available. No new dependencies.
+#   note              open (or create) today's dated note
+#   note <title>      open (or create) a note by title
+#   notes             browse all notes (fzf picker with preview)
+#   notes find <text> search the text of every note
+# ==============================================================================
+NOTES_DIR="${TMKIT_NOTES_DIR:-$HOME/notes}"
+
+note() {
+  mkdir -p "$NOTES_DIR"
+  local ed="${EDITOR:-nano}" f
+  if [ $# -eq 0 ]; then
+    f="$NOTES_DIR/$(date +%F).md"
+    [ -f "$f" ] || printf '# %s\n\n' "$(date '+%A, %d %B %Y')" > "$f"
+  else
+    local slug
+    slug=$(echo "$*" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-')
+    [ -z "$slug" ] && slug="note-$(date +%s)"
+    f="$NOTES_DIR/${slug}.md"
+    [ -f "$f" ] || printf '# %s\n\n_Created %s_\n\n' "$*" "$(date '+%Y-%m-%d')" > "$f"
+  fi
+  "$ed" "$f"
+}
+
+notes() {
+  mkdir -p "$NOTES_DIR"
+  if [ "$1" = "find" ] || [ "$1" = "-s" ]; then
+    shift
+    [ -z "$*" ] && { echo "Usage: notes find <text>"; return 1; }
+    grep -rin --color=auto "$*" "$NOTES_DIR" 2>/dev/null || echo "No notes match '$*'."
+    return
+  fi
+  if [ -z "$(ls -A "$NOTES_DIR" 2>/dev/null)" ]; then
+    echo "No notes yet. Create one with: note <title>   (or just 'note' for today)"
+    return
+  fi
+  if command -v fzf >/dev/null 2>&1; then
+    local prev='cat {}'
+    command -v glow >/dev/null 2>&1 && prev='glow -s dark {} 2>/dev/null || cat {}'
+    local pick
+    pick=$(find "$NOTES_DIR" -type f -name '*.md' | sort -r | fzf --prompt="notes> " --preview "$prev")
+    [ -n "$pick" ] && "${EDITOR:-nano}" "$pick"
+  else
+    echo "Your notes ($NOTES_DIR):"
+    ls -1t "$NOTES_DIR"/*.md 2>/dev/null
+    echo ""
+    echo "Open one with: note <title>   |   search with: notes find <text>"
+  fi
+}
+
+# ==============================================================================
 # tips: random bash tip shown on startup and on demand
 # ==============================================================================
 __bash_tips=(
@@ -283,9 +335,14 @@ __bash_tips=(
   "Run 'vid movie.mp4' or 'mpv' to play video or audio files."
   "Run 'yt-dlp <url>' to download a YouTube video or podcast."
   "Run 'pass' to manage passwords securely — all encrypted, all yours."
-  "Run 'search linux tips' to search DuckDuckGo without a browser — no tracking, no ads."
+  "Run 'web linux tips' to search DuckDuckGo without a browser — no tracking, no ads."
   "Run 'wiki black holes' to read a Wikipedia article right in the terminal."
   "Run 'tuir -s linux' or 'reddit' to browse Reddit without a browser."
+  "Run 'note' to jot down today's thoughts, or 'note ideas' for a named note."
+  "Run 'notes' to browse your notes, or 'notes find exam' to search inside them."
+  "Run 'lynx example.com' or 'w3m' to read any website as fast, clean text."
+  "Run 'browsh' or 'carbonyl' to view full web pages — images and all — in the terminal."
+  "Turn a note into a PDF to hand in: 'pandoc essay.md -o essay.pdf' (needs pandoc)."
   "Run 'apps' to see everything installed and how to launch it."
 )
 
@@ -296,6 +353,17 @@ tips() {
   echo -e "   ${_b}Run 'tips' anytime for another. Run 'cheat <cmd>' for examples.${_r}"
 }
 alias tip='tips'
+
+# Startup tip frequency, controlled by TMKIT_TIP_FREQUENCY (set via 'customize'):
+#   0 = never   1 = every time   N = roughly 1 in N
+__tip_startup() {
+  local freq="${TMKIT_TIP_FREQUENCY:-1}"
+  case "$freq" in
+    0) ;;
+    1) tips ;;
+    *) (( RANDOM % freq == 0 )) && tips ;;
+  esac
+}
 
 # ==============================================================================
 # helpme: beginner-friendly help index
@@ -316,6 +384,8 @@ helpme() {
     echo -e "  ${_y}helpme shortcuts${_r}   keyboard shortcuts"
     echo -e "  ${_y}helpme packages${_r}    installing software on Arch"
     echo -e "  ${_y}helpme daily${_r}       email, music, news, calendar, PDFs"
+    echo -e "  ${_y}helpme notes${_r}       take notes & study in the terminal"
+    echo -e "  ${_y}helpme web${_r}         browsers & searching the web"
     echo -e "  ${_y}helpme ssh${_r}         connecting to servers and GitHub"
     echo -e "  ${_y}helpme why${_r}         what is this terminal kit and why it matters"
     echo ""
@@ -431,9 +501,11 @@ helpme() {
       echo -e "  ${_c}glow docs/${_r}         browse a folder of markdown files"
       echo -e "  ${_c}wiki <topic>${_r}        Wikipedia article in the terminal"
       echo -e "  ${_c}zathura <file.pdf>${_r} open a PDF (needs desktop env)"
+      echo -e "  ${_c}pdftotext f.pdf -${_r}  read a PDF as text (no GUI; needs poppler)"
+      echo -e "  ${_c}note / notes${_r}       take & browse notes — see 'helpme notes'"
       echo ""
       echo -e "  ${_b}Search & Web${_r}"
-      echo -e "  ${_c}search <query>${_r}      DuckDuckGo search — no tracking, no ads"
+      echo -e "  ${_c}web <query>${_r}         DuckDuckGo search — no tracking, no ads"
       echo -e "  ${_c}w3m <url>${_r}           browse any website in the terminal"
       echo -e "  ${_c}tuir -s <topic>${_r}     browse Reddit (alias: reddit)"
       echo -e "  ${_c}news / newsboat${_r}     RSS reader (add feeds: ~/.newsboat/urls)"
@@ -466,6 +538,41 @@ helpme() {
       echo -e "  ${_c}pass init <email>${_r}   set up your password manager"
       echo -e "  ${_c}pass add github${_r}     store a password"
       echo -e "  ${_c}pass github${_r}         retrieve a password"
+      echo ""
+      ;;
+    notes)
+      echo -e "\n${_b}Notes & Studying${_r}"
+      echo -e "  Plain markdown notes in ${_c}~/notes${_r} — yours forever, searchable, portable.\n"
+      echo -e "  ${_c}note${_r}                 open today's dated note (a daily journal)"
+      echo -e "  ${_c}note <title>${_r}         open or create a note by name"
+      echo -e "  ${_c}notes${_r}                browse all notes (arrow keys + preview)"
+      echo -e "  ${_c}notes find <text>${_r}    search the text inside every note"
+      echo ""
+      echo -e "  ${_b}Turn notes into documents (needs pandoc):${_r}"
+      echo -e "  ${_c}pandoc note.md -o note.pdf${_r}    export a note to PDF"
+      echo -e "  ${_c}pandoc note.md -o note.docx${_r}   export to Word for handing in"
+      echo ""
+      echo -e "  ${_b}Spell-check an essay (needs aspell):${_r}"
+      echo -e "  ${_c}aspell check essay.md${_r}         interactive spell-check"
+      echo ""
+      echo -e "  ${_c}Tip:${_r} a note is just a text file — ${_c}grep${_r}, ${_c}git${_r} and ${_c}rsync${_r} all work on them."
+      echo ""
+      ;;
+    web)
+      echo -e "\n${_b}The Web in the Terminal${_r}"
+      echo -e "  ${_b}Search${_r}"
+      echo -e "  ${_c}web <query>${_r}          DuckDuckGo search — no tracking, no ads (ddgr)"
+      echo -e "  ${_c}wiki <topic>${_r}         read a Wikipedia article"
+      echo ""
+      echo -e "  ${_b}Text browsers${_r} (fast, private, keyboard-driven)"
+      echo -e "  ${_c}w3m <url>${_r}            lightweight browser; press q to quit"
+      echo -e "  ${_c}lynx <url>${_r}           the classic text browser"
+      echo ""
+      echo -e "  ${_b}Block browsers${_r} (render real pages, images and video as colour blocks)"
+      echo -e "  ${_c}browsh${_r}               full pages via Firefox — great for modern sites"
+      echo -e "  ${_c}carbonyl <url>${_r}       Chromium in the terminal"
+      echo ""
+      echo -e "  ${_c}Tip:${_r} start with ${_c}w3m${_r} for reading; use ${_c}browsh${_r}/${_c}carbonyl${_r} when a site needs layout."
       echo ""
       ;;
     ssh)
@@ -515,7 +622,7 @@ helpme() {
       ;;
     *)
       echo "Unknown topic: '$topic'"
-      echo "Try: files, search, git, network, process, shortcuts, packages, daily, why"
+      echo "Try: files, search, git, network, process, shortcuts, packages, daily, notes, web, ssh, why"
       ;;
   esac
 }
@@ -525,79 +632,70 @@ helpme() {
 # ==============================================================================
 apps() {
   local _b="\033[1m" _r="\033[0m" _g="\033[1;32m" _y="\033[1;33m" _c="\033[0;36m" _dim="\033[2m"
-  local ok="${_g}✓${_r}" no="${_dim}-${_r}"
+  local ok="${_g}✓${_r}" no="${_dim}✗${_r}"
   local filter="${1:-}"
 
-  _app() {
-    local cmd="$1" label="$2" hint="$3"
-    # If a filter is set, only show matching rows
-    if [ -n "$filter" ] && [[ "$label $cmd" != *"$filter"* ]]; then return; fi
-    if command -v "$cmd" >/dev/null 2>&1; then
-      printf "  %b  %-32s %b%s%b\n" "$ok" "$label" "$_c" "$hint" "$_r"
+  echo ""
+  echo -e "${_b}  Your apps${_r}  ${_dim}(${_g}✓${_dim} ready   ${no}${_dim} not installed yet)${_r}"
+  echo ""
+
+  # --- Shortcuts that launch programs (built from your live aliases) -----------
+  # This reads your actual aliases, so any shortcut you add via 'customize'
+  # shows up here automatically — nothing is hard-coded.
+  local shown=0 missing=0
+  echo -e "  ${_b}Shortcuts${_r}"
+  while IFS= read -r line; do
+    line="${line#alias }"
+    local name="${line%%=*}"
+    local val="${line#*=}"
+    val="${val#\'}"; val="${val%\'}"
+    local target="${val%% *}"
+    [ -z "$name" ] && continue
+    # Skip flag-wrappers (e.g. ls='ls --color=auto') — same command, not an app
+    [ "$target" = "$name" ] && continue
+    # Skip targets that aren't a plain command name (e.g. ${EDITOR:-nano}, $(...))
+    [[ "$target" =~ ^[A-Za-z0-9._/+-]+$ ]] || continue
+    # Skip shortcuts that just run a shell builtin/keyword/function (cd, echo…)
+    case "$(type -t "$target" 2>/dev/null)" in
+      builtin|keyword|function) continue ;;
+    esac
+    if [ -n "$filter" ] && [[ "$name $val" != *"$filter"* ]]; then continue; fi
+    if command -v "$target" >/dev/null 2>&1; then
+      printf "  %b  %-12s %b→ %s%b\n" "$ok" "$name" "$_c" "$val" "$_r"
+      ((shown++)) || true
     else
-      printf "  %b  %b%-32s not installed: sudo pacman -S %s%b\n" "$no" "$_dim" "$label" "$cmd" "$_r"
+      printf "  %b  %b%-12s → %s   (install: install %s)%b\n" "$no" "$_dim" "$name" "$val" "$target" "$_r"
+      ((missing++)) || true
     fi
-  }
-
-  echo ""
-  echo -e "${_b}  Your apps${_r}  ${_dim}(✓ ready  - not installed)${_r}"
+  done < <(alias 2>/dev/null | sort)
+  [ "$shown" -eq 0 ] && [ "$missing" -eq 0 ] && echo -e "  ${_dim}(no program shortcuts found)${_r}"
   echo ""
 
-  echo -e "  ${_b}Reading & Files${_r}"
-  _app glow      "md / glow        markdown"     "md file.md"
-  _app yazi      "files / yazi     file manager" "files"
-  _app bat       "bat              better cat"   "bat file.txt"
-  _app zathura   "zathura          PDF reader"   "zathura file.pdf"
-  _app chafa     "chafa            image viewer" "chafa photo.jpg"
-  echo ""
-
-  echo -e "  ${_b}Email & Web${_r}"
-  _app aerc      "email / aerc     email"        "email"
-  _app newsboat  "news / newsboat  RSS reader"   "news"
-  _app w3m       "w3m              web browser"  "w3m https://example.com"
-  _app ddgr      "search / ddgr    web search"   "search linux tips"
-  echo ""
-
-  echo -e "  ${_b}Music & Video${_r}"
-  _app cmus      "music / cmus     music player" "music"
-  _app mpv       "vid / mpv        video & audio" "vid file.mp4"
-  _app yt-dlp    "yt-dlp           downloader"   "yt-dlp <url>"
-  _app ncspot    "ncspot           Spotify"       "ncspot"
-  _app tuir      "tuir             Reddit TUI"    "tuir -s linux"
-  echo ""
-
-  echo -e "  ${_b}Productivity${_r}"
-  _app calcurse  "calendar         calendar"     "calendar"
-  _app task      "task             to-do list"   "task add 'thing'"
-  _app qalc      "calc             calculator"   "calc '15% of 80'"
-  _app ncdu      "ncdu             disk usage"   "ncdu"
-  _app fastfetch "fastfetch        system info"  "fastfetch"
-  echo ""
-
-  echo -e "  ${_b}Development${_r}"
-  _app nvim      "nvim             text editor"  "nvim file.txt"
-  _app git       "git              version ctrl" "git status"
-  _app lazygit   "lazygit          git TUI"      "lazygit"
-  _app node      "node / nvm       javascript"   "node --version"
-  echo ""
-
-  echo -e "  ${_b}Security${_r}"
-  _app pass      "pass             passwords"    "pass init <email>"
-  _app wl-copy   "clip / paste     clipboard"    "echo hello | clip"
-  echo ""
-
-  # Count missing
-  local missing=0
-  for cmd in glow yazi bat zathura chafa aerc newsboat w3m ddgr cmus mpv yt-dlp ncspot tuir calcurse task qalc ncdu fastfetch nvim git lazygit pass wl-copy; do
-    command -v "$cmd" >/dev/null 2>&1 || (( missing++ )) || true
+  # --- Your own programs (anything you've installed into a personal bin) -------
+  local bindir f base printed_bin=0
+  for bindir in "$HOME/.local/bin" "$HOME/bin"; do
+    [ -d "$bindir" ] || continue
+    for f in "$bindir"/*; do
+      [ -f "$f" ] && [ -x "$f" ] || continue
+      base="$(basename "$f")"
+      if [ -n "$filter" ] && [[ "$base" != *"$filter"* ]]; then continue; fi
+      if [ "$printed_bin" -eq 0 ]; then
+        echo -e "  ${_b}Your programs${_r} ${_dim}(in ~/.local/bin, ~/bin)${_r}"
+        printed_bin=1
+      fi
+      printf "  %b  %-12s %b%s%b\n" "$ok" "$base" "$_dim" "$bindir" "$_r"
+    done
   done
+  [ "$printed_bin" -eq 1 ] && echo ""
 
+  # --- Summary -----------------------------------------------------------------
   if [ "$missing" -gt 0 ]; then
-    echo -e "  ${_y}$missing apps not yet installed.${_r}"
-    echo -e "  Run ${_c}bash ~/tmkit-arch/install.sh${_r} and answer Y to add them."
+    echo -e "  ${_y}$missing shortcut(s) point to a program you haven't installed yet.${_r}"
+    echo -e "  Install one with ${_c}install <name>${_r} — it'll show ${_g}✓${_r} here next time."
   else
-    echo -e "  ${_g}All apps installed — you're fully equipped!${_r}"
+    echo -e "  ${_g}Everything your shortcuts point to is installed. Nice.${_r}"
   fi
+  echo -e "  ${_dim}Add your own with 'customize' → Add a shortcut; it appears here automatically.${_r}"
   echo ""
 }
 
@@ -631,6 +729,15 @@ command_not_found_handle() {
 # ==============================================================================
 # customize: interactive menu to personalize the terminal
 # ==============================================================================
+
+# Personal settings live here, NOT in ~/.bashrc, so they survive reinstalls.
+TMKIT_USER_FILE="$HOME/.config/tmkit/user.sh"
+__tmkit_ensure_user_file() {
+  mkdir -p "$(dirname "$TMKIT_USER_FILE")"
+  [ -f "$TMKIT_USER_FILE" ] || \
+    printf '# ~/.config/tmkit/user.sh — personal settings (never overwritten by the installer)\n' > "$TMKIT_USER_FILE"
+}
+
 __color_palettes=(
   "Ocean Blue      #118ab2"
   "Hacker Green    #06d6a0"
@@ -728,19 +835,25 @@ __customize_color_menu() {
 
   local label marker
   case "$pick" in
-    1) label="directory"      ; marker="# directory" ;;
-    2) label="git branch"     ; marker="# git_branch" ;;
-    3) label="hostname"       ; marker="bold #ffd166" ;;
-    4) label="command timer"  ; marker="bold #f17c1d" ;;
+    1) label="directory"      ; marker="tmkit:color:directory" ;;
+    2) label="git branch"     ; marker="tmkit:color:git_branch" ;;
+    3) label="hostname"       ; marker="tmkit:color:hostname" ;;
+    4) label="command timer"  ; marker="tmkit:color:cmd_duration" ;;
     *) echo "  Skipped." ; return ;;
   esac
 
   __pick_color "$label"
   [ -z "$PICKED_HEX" ] && return
 
-  # Replace the specific line containing the marker
-  sed -i "/$marker/s/#[0-9a-fA-F]\{6\}/$( echo $PICKED_HEX | tr -d '#' | sed 's/^/#/')/" "$toml"
-  echo -e "  ${_c}✓ $label color set to $PICKED_HEX${_r}"
+  if ! grep -q "$marker" "$toml"; then
+    echo "  Could not find the $label color marker in starship.toml — skipped."
+    return
+  fi
+
+  # Anchor to a stable marker comment so this keeps working after theme changes.
+  local hex="#${PICKED_HEX#\#}"
+  sed -i "/$marker/s/#[0-9a-fA-F]\{6\}/$hex/" "$toml"
+  echo -e "  ${_c}✓ $label color set to $hex${_r}"
 }
 
 __customize_tips() {
@@ -754,23 +867,25 @@ __customize_tips() {
   echo ""
   read -rp "  Pick [1-4]: " pick
 
-  # Clean up old setting
-  sed -i '/# TIP_FREQUENCY/d' "$HOME/.bashrc"
-  sed -i '/^__tip_roll/d' "$HOME/.bashrc"
-  sed -i 's/^  __tip_roll$/  tips/' "$HOME/.bashrc"
-  sed -i 's/^  : # tips disabled$/  tips/' "$HOME/.bashrc"
+  local freq
+  case "$pick" in
+    1) freq=1 ;;
+    2) freq=3 ;;
+    3) freq=10 ;;
+    4) freq=0 ;;
+    *) echo "  Skipped." ; return ;;
+  esac
+
+  __tmkit_ensure_user_file
+  sed -i '/^export TMKIT_TIP_FREQUENCY=/d' "$TMKIT_USER_FILE"
+  echo "export TMKIT_TIP_FREQUENCY=$freq" >> "$TMKIT_USER_FILE"
+  export TMKIT_TIP_FREQUENCY="$freq"
 
   case "$pick" in
     1) echo -e "  ${_c}✓ Tips on every startup${_r}" ;;
-    2) echo '__tip_roll() { (( RANDOM % 3 == 0 )) && tips; } # TIP_FREQUENCY' >> "$HOME/.bashrc"
-       sed -i 's/^  tips$/  __tip_roll/' "$HOME/.bashrc"
-       echo -e "  ${_c}✓ Tips on sometimes${_r}" ;;
-    3) echo '__tip_roll() { (( RANDOM % 10 == 0 )) && tips; } # TIP_FREQUENCY' >> "$HOME/.bashrc"
-       sed -i 's/^  tips$/  __tip_roll/' "$HOME/.bashrc"
-       echo -e "  ${_c}✓ Tips set to rarely${_r}" ;;
-    4) sed -i 's/^  tips$/  : # tips disabled/' "$HOME/.bashrc"
-       echo -e "  ${_c}✓ Tips disabled${_r}" ;;
-    *) echo "  Skipped." ;;
+    2) echo -e "  ${_c}✓ Tips sometimes (about 1 in 3)${_r}" ;;
+    3) echo -e "  ${_c}✓ Tips rarely (about 1 in 10)${_r}" ;;
+    4) echo -e "  ${_c}✓ Tips disabled${_r}" ;;
   esac
 }
 
@@ -797,10 +912,10 @@ __customize_editor() {
     return
   fi
 
-  sed -i '/^export EDITOR=/d' "$HOME/.bashrc"
-  sed -i '/^export VISUAL=/d' "$HOME/.bashrc"
-  echo "export EDITOR=$editor" >> "$HOME/.bashrc"
-  echo "export VISUAL=$editor" >> "$HOME/.bashrc"
+  __tmkit_ensure_user_file
+  sed -i '/^export EDITOR=/d;/^export VISUAL=/d' "$TMKIT_USER_FILE"
+  { echo "export EDITOR=$editor"; echo "export VISUAL=$editor"; } >> "$TMKIT_USER_FILE"
+  export EDITOR="$editor" VISUAL="$editor"
   echo -e "  ${_c}✓ Default editor set to $editor${_r}"
 }
 
@@ -818,15 +933,17 @@ __customize_alias() {
   read -rp "  Command to run (e.g. 'cd ~/projects'): " alias_cmd
   [ -z "$alias_cmd" ] && echo "  Skipped." && return
 
+  __tmkit_ensure_user_file
   if alias "$alias_name" >/dev/null 2>&1; then
     read -rp "  '$alias_name' already exists. Overwrite? [y/N] " confirm
     [[ ! "$confirm" =~ ^[Yy]$ ]] && return
-    sed -i "/^alias ${alias_name}=/d" "$HOME/.bashrc"
   fi
+  sed -i "/^alias ${alias_name}=/d" "$TMKIT_USER_FILE"
 
-  printf '\n# Custom shortcut\nalias %s=%q\n' "$alias_name" "$alias_cmd" >> "$HOME/.bashrc"
+  printf 'alias %s=%q\n' "$alias_name" "$alias_cmd" >> "$TMKIT_USER_FILE"
+  eval "alias $alias_name=$(printf '%q' "$alias_cmd")"
   echo -e "  ${_c}✓ Added: ${alias_name}='${alias_cmd}'${_r}"
-  echo -e "  ${_c}  Run 'reload' to use it now${_r}"
+  echo -e "  ${_c}  It's active now and shows up in 'apps'. Saved to ~/.config/tmkit/user.sh${_r}"
 }
 
 
@@ -974,6 +1091,13 @@ export PATH
 command -v corepack >/dev/null 2>&1 && corepack enable >/dev/null 2>&1 || true
 
 # ==============================================================================
+# User settings — personal aliases / editor / tip frequency.
+# Sourced LAST so your choices override the kit defaults above, and kept in a
+# separate file the installer never overwrites (survives reinstalls/upgrades).
+# ==============================================================================
+[ -f "$HOME/.config/tmkit/user.sh" ] && source "$HOME/.config/tmkit/user.sh"
+
+# ==============================================================================
 # Startup
 # ==============================================================================
 if [[ $- == *i* ]]; then
@@ -983,5 +1107,5 @@ if [[ $- == *i* ]]; then
     echo -e "\033[1;33m  👋 First time? Run \033[0;36mapps\033[1;33m to see what's ready to use, or \033[0;36mhelpme\033[1;33m to explore.\033[0m\n"
     touch "$HOME/.tkrc"
   fi
-  tips
+  __tip_startup
 fi
