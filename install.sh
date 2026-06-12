@@ -315,6 +315,17 @@ deploy_configs() {
     cp "$script_dir/configs/aerc/accounts.conf.example" "$HOME/.config/aerc/accounts.conf.example"
     ok "~/.config/aerc/accounts.conf.example deployed (edit to set up email)"
   fi
+
+  # theme packs — deploy loader + all packs so `theme` command works after install
+  if [ -d "$script_dir/themes" ]; then
+    mkdir -p "$HOME/.config/tmkit/themes"
+    cp "$script_dir/themes/theme.sh" "$HOME/.config/tmkit/theme.sh"
+    for _pack in "$script_dir/themes/"*.sh; do
+      [ "$(basename "$_pack")" = "theme.sh" ] && continue
+      cp "$_pack" "$HOME/.config/tmkit/themes/"
+    done
+    ok "Theme packs deployed — run 'theme list' to see options"
+  fi
 }
 
 # ==============================================================================
@@ -560,6 +571,34 @@ install_chafa() {
 }
 
 # ==============================================================================
+# install_themes — interactive theme picker using the deployed theme system
+# ==============================================================================
+install_themes() {
+  if [ ! -f "$HOME/.config/tmkit/theme.sh" ]; then
+    warn "Theme system not deployed — skipping (deploy_configs must run first)"
+    return
+  fi
+
+  # shellcheck disable=SC1090
+  source "$HOME/.config/tmkit/theme.sh"
+
+  echo ""
+  echo -e "  ${_b}Available themes:${_r}"
+  echo ""
+  _theme_list_all
+  echo ""
+
+  read -rp "  Enter theme slug to apply (or Enter to skip): " _tslug
+  if [ -z "$_tslug" ]; then
+    echo "  Skipped — run 'theme list' anytime to apply a theme later."
+    return
+  fi
+
+  _theme_apply "$_tslug"
+  unset _tslug
+}
+
+# ==============================================================================
 optional_installs() {
   echo -e "  These are recommended but not required."
 
@@ -649,6 +688,12 @@ optional_installs() {
   ask "Install JetBrains Mono Nerd Font? (makes prompt icons render correctly) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_font
+
+  header "Themes"
+  echo -e "  Pick a color theme to apply across yazi, lazygit, starship, and taskwarrior."
+  ask "Choose a theme now? [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_themes
 }
 
 # ==============================================================================

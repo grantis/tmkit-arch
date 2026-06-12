@@ -829,6 +829,7 @@ __customize_alias() {
   echo -e "  ${_c}  Run 'reload' to use it now${_r}"
 }
 
+
 customize() {
   local _b="\033[1m" _r="\033[0m" _g="\033[1;32m" _c="\033[0;36m" _y="\033[1;33m"
 
@@ -841,11 +842,12 @@ customize() {
     echo -e "  ${_y}3)${_r} Tip frequency"
     echo -e "  ${_y}4)${_r} Default editor"
     echo -e "  ${_y}5)${_r} Add a shortcut (alias)"
-    echo -e "  ${_y}6)${_r} Open config files directly"
-    echo -e "  ${_y}7)${_r} Apply changes now"
+    echo -e "  ${_y}6)${_r} Apply Catppuccin theme across all apps"
+    echo -e "  ${_y}7)${_r} Open config files directly"
+    echo -e "  ${_y}8)${_r} Apply changes now"
     echo -e "  ${_y}0)${_r} Done"
     echo ""
-    read -rp "  Pick [0-7]: " choice
+    read -rp "  Pick [0-8]: " choice
 
     case "$choice" in
       1) __customize_prompt_style ;;
@@ -855,11 +857,28 @@ customize() {
       5) __customize_alias ;;
       6)
         echo ""
+        if declare -f theme >/dev/null 2>&1; then
+          echo -e "  ${_b}Available themes:${_r}"
+          echo ""
+          theme list
+          read -rp "  Enter theme slug to apply (or Enter to skip): " _tslug
+          if [ -n "$_tslug" ]; then
+            theme apply "$_tslug"
+          else
+            echo "  Skipped."
+          fi
+          unset _tslug
+        else
+          echo -e "  ${_y}Theme system not available.${_r} Run install.sh to set it up."
+        fi
+        ;;
+      7)
+        echo ""
         echo -e "  ${_c}bashrc${_r}       opens ~/.bashrc"
         echo -e "  ${_c}starshiprc${_r}   opens ~/.config/starship.toml"
         echo -e "  Run either command to edit directly."
         ;;
-      7)
+      8)
         source "$HOME/.bashrc" 2>/dev/null
         echo -e "  ${_c}✓ Applied!${_r}"
         ;;
@@ -882,6 +901,11 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
+
+# ==============================================================================
+# Theme system — provides the `theme` command (list / apply / current)
+# ==============================================================================
+[ -f "$HOME/.config/tmkit/theme.sh" ] && source "$HOME/.config/tmkit/theme.sh"
 
 # ==============================================================================
 # Starship Prompt
