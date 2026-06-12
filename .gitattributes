@@ -1,0 +1,8 @@
+# Force LF line endings for all shell scripts and config files
+* text=auto
+*.sh text eol=lf
+*.bashrc text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+configs/** text eol=lf
+docs/** text eol=lf

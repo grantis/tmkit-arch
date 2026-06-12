@@ -180,6 +180,9 @@ bootstrap() {
   # git is needed to clone the kit if they don't have it
   install_pkg git "git"
 
+  # openssh is needed for git over SSH, remote access, and GitHub
+  install_pkg openssh "openssh" ssh
+
   # bash-completion improves tab completion significantly
   if [ "$PKG_MANAGER" = "pacman" ]; then
     install_pkg bash-completion "bash-completion" bash-completion || true

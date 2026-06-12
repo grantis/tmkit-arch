@@ -481,6 +481,82 @@ helpme() {
 }
 
 # ==============================================================================
+# apps: live dashboard — shows what's installed and how to launch it
+# ==============================================================================
+apps() {
+  local _b="\033[1m" _r="\033[0m" _g="\033[1;32m" _y="\033[1;33m" _c="\033[0;36m" _dim="\033[2m"
+  local ok="${_g}✓${_r}" no="${_dim}-${_r}"
+
+  _app() {
+    local cmd="$1" label="$2" hint="$3"
+    if command -v "$cmd" >/dev/null 2>&1; then
+      printf "  %b  %-32s %b%s%b\n" "$ok" "$label" "$_c" "$hint" "$_r"
+    else
+      printf "  %b  %b%-32s not installed: sudo pacman -S %s%b\n" "$no" "$_dim" "$label" "$cmd" "$_r"
+    fi
+  }
+
+  echo ""
+  echo -e "${_b}  Your apps${_r}  ${_dim}(✓ ready  - not installed)${_r}"
+  echo ""
+
+  echo -e "  ${_b}Reading & Files${_r}"
+  _app glow      "md / glow        markdown"     "md file.md"
+  _app yazi      "files / yazi     file manager" "files"
+  _app bat       "bat              better cat"   "bat file.txt"
+  _app zathura   "zathura          PDF reader"   "zathura file.pdf"
+  _app chafa     "chafa            image viewer" "chafa photo.jpg"
+  echo ""
+
+  echo -e "  ${_b}Email & Web${_r}"
+  _app aerc      "email / aerc     email"        "email"
+  _app newsboat  "news / newsboat  RSS reader"   "news"
+  _app w3m       "w3m              web browser"  "w3m https://example.com"
+  echo ""
+
+  echo -e "  ${_b}Music & Video${_r}"
+  _app cmus      "music / cmus     music player" "music"
+  _app mpv       "vid / mpv        video & audio" "vid file.mp4"
+  _app yt-dlp    "yt-dlp           downloader"   "yt-dlp <url>"
+  _app ncspot    "ncspot           Spotify"       "ncspot"
+  echo ""
+
+  echo -e "  ${_b}Productivity${_r}"
+  _app calcurse  "calendar         calendar"     "calendar"
+  _app task      "task             to-do list"   "task add 'thing'"
+  _app qalc      "calc             calculator"   "calc '15% of 80'"
+  _app ncdu      "ncdu             disk usage"   "ncdu"
+  _app fastfetch "fastfetch        system info"  "fastfetch"
+  echo ""
+
+  echo -e "  ${_b}Development${_r}"
+  _app nvim      "nvim             text editor"  "nvim file.txt"
+  _app git       "git              version ctrl" "git status"
+  _app lazygit   "lazygit          git TUI"      "lazygit"
+  _app node      "node / nvm       javascript"   "node --version"
+  echo ""
+
+  echo -e "  ${_b}Security${_r}"
+  _app pass      "pass             passwords"    "pass init <email>"
+  _app wl-copy   "clip / paste     clipboard"    "echo hello | clip"
+  echo ""
+
+  # Count missing
+  local missing=0
+  for cmd in glow yazi bat zathura chafa aerc newsboat w3m cmus mpv yt-dlp ncspot calcurse task qalc ncdu fastfetch nvim git lazygit pass wl-copy; do
+    command -v "$cmd" >/dev/null 2>&1 || (( missing++ )) || true
+  done
+
+  if [ "$missing" -gt 0 ]; then
+    echo -e "  ${_y}$missing apps not yet installed.${_r}"
+    echo -e "  Run ${_c}bash ~/tmkit-arch/install.sh${_r} and answer Y to add them."
+  else
+    echo -e "  ${_g}All apps installed — you're fully equipped!${_r}"
+  fi
+  echo ""
+}
+
+# ==============================================================================
 # command_not_found_handle: friendly error when a command doesn't exist
 # ==============================================================================
 command_not_found_handle() {
@@ -821,9 +897,9 @@ command -v corepack >/dev/null 2>&1 && corepack enable >/dev/null 2>&1 || true
 # ==============================================================================
 if [[ $- == *i* ]]; then
   printf "\n\033[1;32m  ★  Welcome back, %s!\033[0m  (\033[0;36m%s\033[0m)\n" "$USER" "$HOSTNAME"
-  printf "     \033[1;33mhelpme\033[0m · \033[1;33mtips\033[0m · \033[1;33msysinfo\033[0m · \033[1;33mcustomize\033[0m\n\n"
+  printf "     \033[1;33mhelpme\033[0m · \033[1;33mapps\033[0m · \033[1;33mtips\033[0m · \033[1;33msysinfo\033[0m · \033[1;33mcustomize\033[0m\n\n"
   if [ ! -f "$HOME/.tkrc" ]; then
-    echo -e "\033[1;33m  👋 First time? Run \033[0;36mcustomize\033[1;33m to make this yours, or \033[0;36mhelpme\033[1;33m to explore.\033[0m\n"
+    echo -e "\033[1;33m  👋 First time? Run \033[0;36mapps\033[1;33m to see what's ready to use, or \033[0;36mhelpme\033[1;33m to explore.\033[0m\n"
     touch "$HOME/.tkrc"
   fi
   tips
