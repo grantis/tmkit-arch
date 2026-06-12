@@ -510,6 +510,31 @@ install_ncspot() {
     || warn "ncspot install failed"
 }
 
+install_ddgr() {
+  if command -v ddgr >/dev/null 2>&1; then ok "ddgr already installed"; return; fi
+  info "Installing ddgr (DuckDuckGo terminal search)..."
+  $PKG_INSTALL ddgr >/dev/null 2>&1 \
+    && ok "ddgr installed — run 'search linux tips' or 'ddgr <query>'" \
+    || warn "ddgr install failed"
+}
+
+install_tuir() {
+  if command -v tuir >/dev/null 2>&1; then ok "tuir already installed"; return; fi
+  info "Installing tuir (Reddit TUI)..."
+  # tuir is in the AUR on Arch — try yay first, fall back to pip
+  if command -v yay >/dev/null 2>&1; then
+    yay -S --noconfirm tuir >/dev/null 2>&1 \
+      && ok "tuir installed via yay — run 'tuir' or 'reddit'" \
+      || warn "tuir install failed via yay"
+  elif command -v pip3 >/dev/null 2>&1; then
+    pip3 install --user tuir >/dev/null 2>&1 \
+      && ok "tuir installed via pip — run 'tuir' or 'reddit'" \
+      || warn "tuir install failed via pip"
+  else
+    warn "tuir requires yay (AUR) or pip. Install yay: https://github.com/Jguer/yay"
+  fi
+}
+
 install_pass() {
   if command -v pass >/dev/null 2>&1; then ok "pass already installed"; return; fi
   info "Installing pass (password manager)..."
@@ -582,6 +607,14 @@ optional_installs() {
   ask "Install w3m? (text web browser - surf the web without leaving the terminal) [y/N]"
   read -r choice
   [[ "$choice" =~ ^[Yy]$ ]] && install_w3m
+
+  ask "Install ddgr? (DuckDuckGo search - search the web without a browser, no tracking) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_ddgr
+
+  ask "Install tuir? (Reddit TUI - browse Reddit in the terminal) [y/N]"
+  read -r choice
+  [[ "$choice" =~ ^[Yy]$ ]] && install_tuir
 
   ask "Install mpv? (video & audio player - plays almost any file or URL) [y/N]"
   read -r choice

@@ -77,6 +77,8 @@ alias vid='mpv'                                        # video & audio player
 alias calc='qalc'                                      # calculator (e.g. calc "15% of 80")
 alias weather='curl -s wttr.in'                        # full weather forecast
 alias wtf='curl -s "wttr.in?format=3"'                 # one-line weather summary
+alias search='ddgr --np'                               # web search (ddgr must be installed)
+alias reddit='tuir'                                    # Reddit TUI
 # Clipboard: auto-detect Wayland vs X11
 if [ -n "$WAYLAND_DISPLAY" ]; then
   alias clip='wl-copy'
@@ -206,6 +208,37 @@ cheat() {
 }
 
 # ==============================================================================
+# wiki: look up anything on Wikipedia, rendered beautifully
+# Usage: wiki black holes   |   wiki linux kernel   |   wiki python language
+# ==============================================================================
+wiki() {
+  if [ -z "$1" ]; then
+    echo "Usage: wiki <topic>"
+    echo "Examples: wiki black holes | wiki linux | wiki python"
+    return 1
+  fi
+  local query="${*// /_}"
+  if command -v curl >/dev/null 2>&1; then
+    curl -s "https://en.wikipedia.org/api/rest_v1/page/summary/${query}" \
+      | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    title = d.get('title','')
+    desc  = d.get('description','')
+    extract = d.get('extract','No article found.')
+    print(f'\n\033[1m{title}\033[0m  \033[2m{desc}\033[0m\n')
+    print(extract)
+    print()
+except Exception:
+    print('Could not fetch article. Try: w3m https://en.wikipedia.org/wiki/' + sys.argv[1] if len(sys.argv)>1 else '')
+" "$query"
+  else
+    echo "wiki requires curl. Install: sudo pacman -S curl"
+  fi
+}
+
+# ==============================================================================
 # tips: random bash tip shown on startup and on demand
 # ==============================================================================
 __bash_tips=(
@@ -250,6 +283,10 @@ __bash_tips=(
   "Run 'vid movie.mp4' or 'mpv' to play video or audio files."
   "Run 'yt-dlp <url>' to download a YouTube video or podcast."
   "Run 'pass' to manage passwords securely — all encrypted, all yours."
+  "Run 'search linux tips' to search DuckDuckGo without a browser — no tracking, no ads."
+  "Run 'wiki black holes' to read a Wikipedia article right in the terminal."
+  "Run 'tuir -s linux' or 'reddit' to browse Reddit without a browser."
+  "Run 'apps' to see everything installed and how to launch it."
 )
 
 tips() {
@@ -392,8 +429,16 @@ helpme() {
       echo -e "  ${_b}Reading${_r}"
       echo -e "  ${_c}md <file.md>${_r}       read a markdown file beautifully (glow)"
       echo -e "  ${_c}glow docs/${_r}         browse a folder of markdown files"
+      echo -e "  ${_c}wiki <topic>${_r}        Wikipedia article in the terminal"
       echo -e "  ${_c}zathura <file.pdf>${_r} open a PDF (needs desktop env)"
-      echo -e "  ${_c}w3m <url>${_r}          browse a website in the terminal"
+      echo ""
+      echo -e "  ${_b}Search & Web${_r}"
+      echo -e "  ${_c}search <query>${_r}      DuckDuckGo search — no tracking, no ads"
+      echo -e "  ${_c}w3m <url>${_r}           browse any website in the terminal"
+      echo -e "  ${_c}tuir -s <topic>${_r}     browse Reddit (alias: reddit)"
+      echo -e "  ${_c}news / newsboat${_r}     RSS reader (add feeds: ~/.newsboat/urls)"
+      echo -e "  ${_c}weather${_r}             full weather forecast"
+      echo -e "  ${_c}wtf${_r}                 one-line weather summary"
       echo ""
       echo -e "  ${_b}Email${_r}"
       echo -e "  ${_c}email${_r} / ${_c}aerc${_r}       open your email client"
@@ -404,11 +449,6 @@ helpme() {
       echo -e "  ${_c}vid <file>${_r} / ${_c}mpv${_r}   play video or audio files"
       echo -e "  ${_c}yt-dlp <url>${_r}       download YouTube video or audio"
       echo -e "  ${_c}ncspot${_r}              Spotify in the terminal"
-      echo ""
-      echo -e "  ${_b}News & Weather${_r}"
-      echo -e "  ${_c}news${_r} / ${_c}newsboat${_r}    RSS reader (add feeds: ~/.newsboat/urls)"
-      echo -e "  ${_c}weather${_r}             full weather forecast"
-      echo -e "  ${_c}wtf${_r}                 one-line weather summary"
       echo ""
       echo -e "  ${_b}Calendar, Tasks & Calculator${_r}"
       echo -e "  ${_c}calendar${_r} / ${_c}calcurse${_r}  calendar + to-do list"
@@ -486,9 +526,12 @@ helpme() {
 apps() {
   local _b="\033[1m" _r="\033[0m" _g="\033[1;32m" _y="\033[1;33m" _c="\033[0;36m" _dim="\033[2m"
   local ok="${_g}✓${_r}" no="${_dim}-${_r}"
+  local filter="${1:-}"
 
   _app() {
     local cmd="$1" label="$2" hint="$3"
+    # If a filter is set, only show matching rows
+    if [ -n "$filter" ] && [[ "$label $cmd" != *"$filter"* ]]; then return; fi
     if command -v "$cmd" >/dev/null 2>&1; then
       printf "  %b  %-32s %b%s%b\n" "$ok" "$label" "$_c" "$hint" "$_r"
     else
@@ -512,6 +555,7 @@ apps() {
   _app aerc      "email / aerc     email"        "email"
   _app newsboat  "news / newsboat  RSS reader"   "news"
   _app w3m       "w3m              web browser"  "w3m https://example.com"
+  _app ddgr      "search / ddgr    web search"   "search linux tips"
   echo ""
 
   echo -e "  ${_b}Music & Video${_r}"
@@ -519,6 +563,7 @@ apps() {
   _app mpv       "vid / mpv        video & audio" "vid file.mp4"
   _app yt-dlp    "yt-dlp           downloader"   "yt-dlp <url>"
   _app ncspot    "ncspot           Spotify"       "ncspot"
+  _app tuir      "tuir             Reddit TUI"    "tuir -s linux"
   echo ""
 
   echo -e "  ${_b}Productivity${_r}"
@@ -543,7 +588,7 @@ apps() {
 
   # Count missing
   local missing=0
-  for cmd in glow yazi bat zathura chafa aerc newsboat w3m cmus mpv yt-dlp ncspot calcurse task qalc ncdu fastfetch nvim git lazygit pass wl-copy; do
+  for cmd in glow yazi bat zathura chafa aerc newsboat w3m ddgr cmus mpv yt-dlp ncspot tuir calcurse task qalc ncdu fastfetch nvim git lazygit pass wl-copy; do
     command -v "$cmd" >/dev/null 2>&1 || (( missing++ )) || true
   done
 
@@ -644,15 +689,27 @@ __customize_prompt_style() {
   echo ""
   read -rp "  Pick [1-3]: " pick
 
+  # Use python to safely rewrite the multiline format block in TOML
+  local new_format
   case "$pick" in
-    1) sed -i 's|^format = .*|format = """\n[┌─](#0f4c81)$username$hostname$directory$git_branch$git_status\n[└─>](#0f4c81)$nodejs$python$cmd_duration$status $character"""|' "$toml"
-       echo -e "  ${_c}✓ Two-line prompt set${_r}" ;;
-    2) sed -i 's|^format = .*|format = "$username$hostname$directory$git_branch$git_status$nodejs$python$cmd_duration$status$character"|' "$toml"
-       echo -e "  ${_c}✓ Single line prompt set${_r}" ;;
-    3) sed -i 's|^format = .*|format = "$directory$git_branch$status$character"|' "$toml"
-       echo -e "  ${_c}✓ Minimal prompt set${_r}" ;;
-    *) echo "  Skipped." ;;
+    1) new_format='format = """\n[┌─](#0f4c81)$username$hostname$directory$git_branch$git_status\n[└─>](#0f4c81)$nodejs$python$cmd_duration$status $character"""' ;;
+    2) new_format='format = "$username$hostname$directory$git_branch$git_status$nodejs$python$cmd_duration$status$character"' ;;
+    3) new_format='format = "$directory$git_branch$status$character"' ;;
+    *) echo "  Skipped."; return ;;
   esac
+
+  python3 - "$toml" "$new_format" << 'PYEOF'
+import sys, re
+toml_path, new_fmt = sys.argv[1], sys.argv[2]
+with open(toml_path) as f:
+    content = f.read()
+# Replace the entire format = """..""" or format = ".." block at the top level
+content = re.sub(r'^format = """.*?"""', new_fmt, content, flags=re.DOTALL|re.MULTILINE, count=1)
+content = re.sub(r'^format = "[^"]*"', new_fmt, content, flags=re.MULTILINE, count=1)
+with open(toml_path, 'w') as f:
+    f.write(content)
+PYEOF
+  echo -e "  ${_c}✓ Prompt style updated — run 'reload' or open a new terminal${_r}"
 }
 
 __customize_color_menu() {
